@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Tracker App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.1/flowbite.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            900: '#0c4a6e',
+                        },
+                        secondary: {
+                            500: '#a78bfa',
+                            600: '#8b5cf6',
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.6s ease-out',
+                        'slide-up': 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                        'bounce-slow': 'bounce 2s infinite',
+                        'stagger': 'stagger 0.1s ease-in-out',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(30px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        },
+                        stagger: {
+                            '0%': { transform: 'translateY(10px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        .dark .glass {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        .sidebar {
+            background: linear-gradient(180deg, #1e3a8a 0%, #1e40af 100%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .sidebar-item {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .sidebar-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 0;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            transition: width 0.3s ease;
+            z-index: -1;
+        }
+        .sidebar-item:hover::before {
+            width: 100%;
+        }
+        .sidebar-item:hover {
+            transform: translateX(8px);
+        }
+        .card-hover {
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .card-hover::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 1;
+        }
+        .card-hover:hover::before {
+            opacity: 1;
+        }
+        .card-hover:hover {
+            transform: translateY(-12px) scale(1.03);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        .progress-bar {
+            background: linear-gradient(90deg, #10b981, #f59e0b, #ef4444);
+            background-size: 200% 100%;
+            animation: progress 2s ease-in-out infinite;
+        }
+        @keyframes progress {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .table-row {
+            transition: all 0.3s ease;
+        }
+        .table-row:hover {
+            background: linear-gradient(90deg, rgba(59,130,246,0.05), rgba(59,130,246,0.05));
+            transform: scale(1.01);
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+        }
+        .stagger-1 { animation-delay: 0.1s; }
+        .stagger-2 { animation-delay: 0.2s; }
+        .stagger-3 { animation-delay: 0.3s; }
+        .stagger-4 { animation-delay: 0.4s; }
+        /* Overflow fixes */
+        .table-cell {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 0;
+        }
+        @media (max-width: 1024px) {
+            .table-cell {
+                white-space: normal;
+                word-break: break-word;
+            }
+        }
+        .main-content {
+            overflow-x: hidden;
+        }
+        /* Table fixes */
+        .inventory-table {
+            overflow-x: auto;
+        }
+        .inventory-table table {
+            table-layout: fixed;
+            width: 100%;
+            min-width: 600px; /* Ensure minimum width for scroll on small screens */
+        }
+        .inventory-table th:nth-child(1),
+        .inventory-table td:nth-child(1) { width: 25%; } /* Name */
+        .inventory-table th:nth-child(2),
+        .inventory-table td:nth-child(2) { width: 12%; } /* Quantity */
+        .inventory-table th:nth-child(3),
+        .inventory-table td:nth-child(3) { width: 15%; } /* Price */
+        .inventory-table th:nth-child(4),
+        .inventory-table td:nth-child(4) { width: 13%; } /* Stock Level */
+        .inventory-table th:nth-child(5),
+        .inventory-table td:nth-child(5) { width: 20%; } /* Status */
+        .inventory-table th:nth-child(6),
+        .inventory-table td:nth-child(6) { width: 15%; } /* Actions */
+        @media (max-width: 640px) {
+            .inventory-table th:nth-child(4),
+            .inventory-table td:nth-child(4) { display: none; }
+            .inventory-table th:nth-child(1),
+            .inventory-table td:nth-child(1) { width: 40%; }
+            .inventory-table th:nth-child(2),
+            .inventory-table td:nth-child(2) { width: 20%; }
+            .inventory-table th:nth-child(3),
+            .inventory-table td:nth-child(3) { width: 20%; }
+            .inventory-table th:nth-child(5),
+            .inventory-table td:nth-child(5) { width: 10%; }
+            .inventory-table th:nth-child(6),
+            .inventory-table td:nth-child(6) { width: 10%; }
+        }
+        /* Mobile responsive table */
+        @media screen and (max-width: 640px) {
+            .inventory-table table,
+            .inventory-table thead,
+            .inventory-table tbody,
+            .inventory-table th,
+            .inventory-table td,
+            .inventory-table tr {
+                display: block;
+            }
+            .inventory-table thead tr {
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+            .inventory-table tr {
+                border: 1px solid #e5e7eb;
+                margin-bottom: 1rem;
+                padding: 1rem;
+                border-radius: 0.5rem;
+                background: white;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                dark: {
+                    border-color: #374151;
+                    background: #1f2937;
+                }
+            }
+            .inventory-table td {
+                border: none;
+                position: relative;
+                padding-left: 50%;
+                padding-top: 0.5rem;
+                padding-bottom: 0.5rem;
+                white-space: normal;
+                text-align: right;
+            }
+            .inventory-table td:before {
+                content: attr(data-label) ": ";
+                position: absolute;
+                left: 6px;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                font-weight: bold;
+                text-align: left;
+                color: #374151;
+                dark: {
+                    color: #d1d5db;
+                }
+            }
+            .inventory-table td:last-child:before {
+                content: "Actions: ";
+            }
+            .inventory-table .status-span {
+                justify-content: flex-end;
+            }
+            .inventory-table .actions-buttons {
+                display: flex;
+                justify-content: flex-end;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 to-gray-800 text-gray-100 min-h-screen transition-all duration-500 overflow-x-hidden">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar fixed inset-y-0 left-0 z-50 w-72 h-full glass">
+        <div class="flex flex-col h-full">
+            <div class="flex items-center justify-between p-6 border-b border-white/20">
+                <div class="text-white text-2xl font-bold flex items-center">
+                    <i class="fas fa-boxes mr-2 text-primary-300"></i>
+                    Inventory Pro
+                </div>
+                <button onclick="toggleSidebar()" class="lg:hidden text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <nav class="flex-1 p-6 space-y-3">
+                <a href="#" onclick="showPage('dashboard')" class="sidebar-item nav-link active flex items-center px-4 py-3 text-lg font-semibold text-white rounded-2xl transition-all" id="nav-dashboard">
+                    <i class="fas fa-tachometer-alt mr-3 text-primary-200"></i>
+                    Dashboard
+                </a>
+                <a href="#" onclick="showPage('inventory')" class="sidebar-item nav-link flex items-center px-4 py-3 text-lg font-semibold text-white/70 hover:text-white rounded-2xl transition-all" id="nav-inventory">
+                    <i class="fas fa-list mr-3 text-primary-200"></i>
+                    Inventory
+                </a>
+            </nav>
+        </div>
+    </aside>
+    <!-- Mobile Sidebar Toggle Overlay -->
+    <div class="fixed inset-0 z-40 lg:hidden bg-black/50 backdrop-blur-sm transition-opacity" id="mobile-overlay" onclick="toggleSidebar()" style="display: none;"></div>
+    <button onclick="toggleSidebar()" class="fixed top-6 left-6 z-50 lg:hidden p-3 rounded-2xl bg-primary-600 text-white shadow-2xl hover:shadow-blue-500/50 transition-all">
+        <i class="fas fa-bars text-xl"></i>
+    </button>
+    <!-- Main Content -->
+    <main class="lg:ml-72 pt-6 pb-12 px-4 sm:px-6 lg:px-12 min-h-screen main-content">
+        <!-- Dashboard Page -->
+        <section id="dashboard" class="page active">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-12">
+                <div class="card-hover glass rounded-3xl p-6 sm:p-8 border border-white/20 animate-slide-up stagger-1 overflow-hidden">
+                    <div class="flex items-center justify-between relative z-10">
+                        <div>
+                            <p class="text-sm font-semibold text-white/70 mb-2">Total Items</p>
+                            <p class="text-3xl sm:text-4xl font-bold text-white mb-0" id="totalItems">0</p>
+                        </div>
+                        <div class="p-3 sm:p-4 bg-white/10 rounded-full backdrop-blur-sm animate-bounce-slow">
+                            <i class="fas fa-boxes text-xl sm:text-2xl text-primary-200"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-hover glass rounded-3xl p-6 sm:p-8 border border-white/20 animate-slide-up stagger-2 overflow-hidden">
+                    <div class="flex items-center justify-between relative z-10">
+                        <div>
+                            <p class="text-sm font-semibold text-white/70 mb-2">Low Stock</p>
+                            <p class="text-3xl sm:text-4xl font-bold text-yellow-300 mb-0" id="lowStock">0</p>
+                        </div>
+                        <div class="p-3 sm:p-4 bg-yellow-500/10 rounded-full backdrop-blur-sm animate-bounce-slow">
+                            <i class="fas fa-exclamation-triangle text-xl sm:text-2xl text-yellow-300"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-hover glass rounded-3xl p-6 sm:p-8 border border-white/20 animate-slide-up stagger-3 overflow-hidden">
+                    <div class="flex items-center justify-between relative z-10">
+                        <div>
+                            <p class="text-sm font-semibold text-white/70 mb-2">Total Value</p>
+                            <p class="text-3xl sm:text-4xl font-bold text-white mb-0" id="totalValue">₹0</p>
+                        </div>
+                        <div class="p-3 sm:p-4 bg-green-500/10 rounded-full backdrop-blur-sm animate-bounce-slow">
+                            <i class="fas fa-rupee-sign text-xl sm:text-2xl text-green-300"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-hover glass rounded-3xl p-6 sm:p-8 border border-white/20 animate-slide-up stagger-4 overflow-hidden">
+                    <div class="flex items-center justify-between relative z-10">
+                        <div>
+                            <p class="text-sm font-semibold text-white/70 mb-2">Out of Stock</p>
+                            <p class="text-3xl sm:text-4xl font-bold text-red-300 mb-0" id="outOfStock">0</p>
+                        </div>
+                        <div class="p-3 sm:p-4 bg-red-500/10 rounded-full backdrop-blur-sm animate-bounce-slow">
+                            <i class="fas fa-ban text-xl sm:text-2xl text-red-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="glass rounded-2xl p-4 sm:p-6 mb-12 border border-yellow-500/20 animate-fade-in overflow-hidden" id="alerts" style="display: none;">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 p-2 bg-yellow-500/20 rounded-full mr-3 sm:mr-4">
+                        <i class="fas fa-bell text-yellow-200 text-lg sm:text-xl animate-pulse"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-base sm:text-lg font-semibold text-yellow-200" id="alertText"></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- Inventory Page -->
+        <section id="inventory" class="page hidden">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 animate-slide-up">
+                <h2 class="text-3xl sm:text-4xl font-bold text-white bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">Inventory Management</h2>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <button class="flex items-center px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2" onclick="openModal('add')">
+                        <i class="fas fa-plus mr-2"></i>
+                        Add Item
+                    </button>
+                    <button class="flex items-center px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-secondary-600 to-secondary-700 hover:from-secondary-700 hover:to-secondary-800 text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2" onclick="exportToCSV()">
+                        <i class="fas fa-download mr-2"></i>
+                        Export CSV
+                    </button>
+                </div>
+            </div>
+            <div class="glass rounded-3xl overflow-hidden shadow-2xl mb-12 animate-slide-up inventory-table">
+                <div class="p-4 sm:p-8 border-b border-white/20">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-white/50"></i>
+                        <input type="text" class="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 bg-gray-800/30 border border-white/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-white placeholder-white/50" id="searchInput" placeholder="Search items..." onkeyup="filterItems()">
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table>
+                        <thead class="bg-gray-800/30">
+                            <tr>
+                                <th class="px-4 sm:px-8 py-4 sm:py-6 text-left text-base sm:text-lg font-semibold text-white/70 uppercase tracking-wide table-cell">Name</th>
+                                <th class="px-4 sm:px-8 py-4 sm:py-6 text-left text-base sm:text-lg font-semibold text-white/70 uppercase tracking-wide table-cell">Quantity</th>
+                                <th class="px-4 sm:px-8 py-4 sm:py-6 text-left text-base sm:text-lg font-semibold text-white/70 uppercase tracking-wide table-cell">Price</th>
+                                <th class="px-4 sm:px-8 py-4 sm:py-6 text-left text-base sm:text-lg font-semibold text-white/70 uppercase tracking-wide table-cell hidden sm:table-cell">Stock Level</th>
+                                <th class="px-4 sm:px-8 py-4 sm:py-6 text-left text-base sm:text-lg font-semibold text-white/70 uppercase tracking-wide table-cell">Status</th>
+                                <th class="px-4 sm:px-8 py-4 sm:py-6 text-left text-base sm:text-lg font-semibold text-white/70 uppercase tracking-wide table-cell">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryTable" class="divide-y divide-white/10">
+                            <!-- Items populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+    <!-- Modal -->
+    <div id="itemModal" class="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 hidden p-4">
+        <div class="glass rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto animate-slide-up">
+            <div class="p-6 sm:p-8">
+                <h2 id="modalTitle" class="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 text-white bg-gradient-to-r from-primary-400 to-secondary-400 bg-clip-text text-transparent">Add Item</h2>
+                <form id="itemForm">
+                    <div class="mb-4 sm:mb-6">
+                        <label for="itemName" class="block text-base sm:text-lg font-semibold text-white/90 mb-2 sm:mb-3 flex items-center">
+                            <i class="fas fa-tag mr-2 text-primary-300"></i>
+                            Name
+                        </label>
+                        <input type="text" id="itemName" class="w-full p-3 sm:p-4 bg-gray-800/30 border border-white/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-white placeholder-white/50" required>
+                    </div>
+                    <div class="mb-4 sm:mb-6">
+                        <label for="itemQuantity" class="block text-base sm:text-lg font-semibold text-white/90 mb-2 sm:mb-3 flex items-center">
+                            <i class="fas fa-hashtag mr-2 text-primary-300"></i>
+                            Quantity
+                        </label>
+                        <input type="number" id="itemQuantity" min="0" class="w-full p-3 sm:p-4 bg-gray-800/30 border border-white/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-white placeholder-white/50" required>
+                    </div>
+                    <div class="mb-4 sm:mb-6">
+                        <label for="itemPrice" class="block text-base sm:text-lg font-semibold text-white/90 mb-2 sm:mb-3 flex items-center">
+                            <i class="fas fa-rupee-sign mr-2 text-primary-300"></i>
+                            Price
+                        </label>
+                        <input type="number" id="itemPrice" min="0" step="0.01" class="w-full p-3 sm:p-4 bg-gray-800/30 border border-white/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-white placeholder-white/50" required>
+                    </div>
+                    <div class="mb-6 sm:mb-8">
+                        <label for="itemStatus" class="block text-base sm:text-lg font-semibold text-white/90 mb-2 sm:mb-3 flex items-center">
+                            <i class="fas fa-info-circle mr-2 text-primary-300"></i>
+                            Status
+                        </label>
+                        <select id="itemStatus" class="w-full p-3 sm:p-4 bg-gray-800/30 border border-white/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-white">
+                            <option value="in-stock">In Stock</option>
+                            <option value="low-stock">Low Stock</option>
+                            <option value="out-of-stock">Out of Stock</option>
+                        </select>
+                    </div>
+                    <div class="flex justify-end space-x-3 sm:space-x-4">
+                        <button type="button" class="px-6 sm:px-8 py-3 sm:py-4 text-white/70 border border-white/20 rounded-2xl hover:bg-white/10 transition-all transform hover:scale-105" onclick="closeModal()">
+                            <i class="fas fa-times mr-2"></i>
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-2xl font-bold shadow-xl hover:shadow-2xl transition-all transform hover:scale-105">
+                            <i class="fas fa-save mr-2"></i>
+                            Save
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- Scripts -->
+    <script>
+        // Sidebar
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobile-overlay');
+            sidebar.classList.toggle('open');
+            overlay.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
+        }
+        // Data
+        let inventory = JSON.parse(localStorage.getItem('inventory')) || [
+            { id: 1, name: 'Laptop', quantity: 10, price: 999.99, status: 'in-stock' },
+            { id: 2, name: 'Mouse', quantity: 5, price: 19.99, status: 'low-stock' },
+            { id: 3, name: 'Keyboard', quantity: 0, price: 49.99, status: 'out-of-stock' },
+            { id: 4, name: 'Monitor', quantity: 20, price: 299.99, status: 'in-stock' }
+        ];
+        let nextId = inventory.length > 0 ? Math.max(...inventory.map(item => item.id)) + 1 : 1;
+        let editingId = null;
+        // Update Status Based on Quantity
+        function updateStatus(item) {
+            if (item.quantity === 0) return 'out-of-stock';
+            if (item.quantity <= 5) return 'low-stock';
+            return 'in-stock';
+        }
+        // Export to CSV
+        function exportToCSV() {
+            const headers = ['ID', 'Name', 'Quantity', 'Price', 'Status'];
+            const rows = inventory.map(item => [
+                item.id,
+                `"${item.name}"`, // Quote name to handle commas
+                item.quantity,
+                item.price,
+                item.status
+            ]);
+            const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'inventory.csv');
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+        // Page Navigation
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach((page, index) => {
+                page.classList.add('hidden');
+                page.style.animation = 'none';
+            });
+            const targetPage = document.getElementById(pageId);
+            targetPage.classList.remove('hidden');
+            setTimeout(() => {
+                targetPage.classList.add('animate-fade-in');
+                targetPage.querySelectorAll('.animate-slide-up').forEach((el, i) => {
+                    el.style.animationDelay = `${i * 0.1}s`;
+                });
+            }, 50);
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active', 'text-white/70');
+                link.classList.add('text-white/70');
+            });
+            document.getElementById(`nav-${pageId}`).classList.add('active');
+            document.getElementById(`nav-${pageId}`).classList.remove('text-white/70');
+            if (window.innerWidth < 1024) toggleSidebar();
+            if (pageId === 'dashboard') updateDashboard();
+            if (pageId === 'inventory') renderInventory();
+        }
+        // Dashboard
+        function updateDashboard() {
+            const totalItems = inventory.length;
+            const lowStock = inventory.filter(item => item.quantity > 0 && item.quantity <= 5).length;
+            const outOfStock = inventory.filter(item => item.quantity === 0).length;
+            const totalValue = inventory.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+            document.getElementById('totalItems').textContent = totalItems;
+            document.getElementById('lowStock').textContent = lowStock;
+            document.getElementById('outOfStock').textContent = outOfStock;
+            document.getElementById('totalValue').textContent = `₹${totalValue.toLocaleString(undefined, {maximumFractionDigits: 2})}`;
+            const alertsDiv = document.getElementById('alerts');
+            const alertText = document.getElementById('alertText');
+            if (lowStock > 0 || outOfStock > 0) {
+                alertText.textContent = `⚠️ ${lowStock} items low on stock, ${outOfStock} out of stock. Restock soon!`;
+                alertsDiv.style.display = 'block';
+            } else {
+                alertsDiv.style.display = 'none';
+            }
+        }
+        // Inventory Render
+        function renderInventory(items = inventory) {
+            const tbody = document.getElementById('inventoryTable');
+            tbody.innerHTML = items.map((item, index) => {
+                const status = updateStatus(item);
+                const progress = Math.min((item.quantity / 20) * 100, 100); // Assume max 20 for bar
+                const statusClass = getStatusClasses(status);
+                return `
+                    <tr class="table-row">
+                        <td data-label="Name" class="px-4 sm:px-8 py-4 sm:py-6 text-base sm:text-lg font-semibold text-white table-cell animate-stagger" style="animation-delay: ${index * 0.1}s;">${item.name}</td>
+                        <td data-label="Quantity" class="px-4 sm:px-8 py-4 sm:py-6 text-base sm:text-lg text-white/80 table-cell animate-stagger" style="animation-delay: ${index * 0.1}s;">${item.quantity}</td>
+                        <td data-label="Price" class="px-4 sm:px-8 py-4 sm:py-6 text-base sm:text-lg text-white/80 table-cell animate-stagger" style="animation-delay: ${index * 0.1}s;">₹${item.price.toFixed(2)}</td>
+                        <td data-label="Stock Level" class="px-4 sm:px-8 py-4 sm:py-6 table-cell hidden sm:table-cell animate-stagger" style="animation-delay: ${index * 0.1}s;">
+                            <div class="w-20 sm:w-24 h-2 sm:h-3 bg-white/10 rounded-full overflow-hidden">
+                                <div class="h-full progress-bar rounded-full" style="width: ${progress}%"></div>
+                            </div>
+                        </td>
+                        <td data-label="Status" class="px-4 sm:px-8 py-4 sm:py-6 table-cell animate-stagger status-span" style="animation-delay: ${index * 0.1}s;">
+                            <span class="inline-flex text-xs sm:text-sm leading-5 font-bold rounded-full ${statusClass}">
+                                ${status.replace('-', ' ')}
+                            </span>
+                        </td>
+                        <td data-label="Actions" class="px-4 sm:px-8 py-4 sm:py-6 text-sm font-semibold table-cell animate-stagger actions-buttons" style="animation-delay: ${index * 0.1}s;">
+                            <button class="text-primary-300 hover:text-primary-100 mr-2 sm:mr-4 transition-all transform hover:scale-110" onclick="editItem(${item.id})" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="text-red-300 hover:text-red-100 transition-all transform hover:scale-110" onclick="deleteItem(${item.id})" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        function filterItems() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = inventory.filter(item => item.name.toLowerCase().includes(search));
+            renderInventory(filtered);
+        }
+        // Modal
+        function openModal(mode, id = null) {
+            editingId = id;
+            const modal = document.getElementById('itemModal');
+            const title = document.getElementById('modalTitle');
+            const form = document.getElementById('itemForm');
+            if (mode === 'add') {
+                title.textContent = 'Add New Item';
+                form.reset();
+            } else {
+                title.textContent = 'Edit Item';
+                const item = inventory.find(i => i.id === id);
+                document.getElementById('itemName').value = item.name;
+                document.getElementById('itemQuantity').value = item.quantity;
+                document.getElementById('itemPrice').value = item.price;
+                document.getElementById('itemStatus').value = updateStatus(item);
+            }
+            modal.classList.remove('hidden');
+        }
+        function closeModal() {
+            document.getElementById('itemModal').classList.add('hidden');
+            editingId = null;
+        }
+        document.getElementById('itemForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = document.getElementById('itemName').value;
+            const quantity = parseInt(document.getElementById('itemQuantity').value);
+            const price = parseFloat(document.getElementById('itemPrice').value);
+            const status = updateStatus({quantity});
+            if (editingId) {
+                const item = inventory.find(i => i.id === editingId);
+                item.name = name;
+                item.quantity = quantity;
+                item.price = price;
+                item.status = status;
+            } else {
+                inventory.push({ id: nextId++, name, quantity, price, status });
+            }
+            localStorage.setItem('inventory', JSON.stringify(inventory));
+            closeModal();
+            renderInventory();
+            updateDashboard();
+        });
+        function editItem(id) {
+            openModal('edit', id);
+        }
+        function deleteItem(id) {
+            if (confirm('Delete this item?')) {
+                inventory = inventory.filter(i => i.id !== id);
+                localStorage.setItem('inventory', JSON.stringify(inventory));
+                renderInventory();
+                updateDashboard();
+            }
+        }
+        function getStatusClasses(status) {
+            switch (status) {
+                case 'in-stock': return 'bg-green-500/20 text-green-300 border border-green-500/30';
+                case 'low-stock': return 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30';
+                case 'out-of-stock': return 'bg-red-500/20 text-red-300 border border-red-500/30';
+                default: return 'bg-gray-500/20 text-gray-300 border border-gray-500/30';
+            }
+        }
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            // Update statuses
+            inventory.forEach(item => item.status = updateStatus(item));
+            localStorage.setItem('inventory', JSON.stringify(inventory));
+            updateDashboard();
+            renderInventory();
+            window.onclick = (event) => {
+                const modal = document.getElementById('itemModal');
+                if (event.target === modal) closeModal();
+            };
+        });
+    </script>
+</body>
+</html>
