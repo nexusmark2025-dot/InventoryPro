@@ -166,92 +166,30 @@
             min-width: 600px; /* Ensure minimum width for scroll on small screens */
         }
         .inventory-table th:nth-child(1),
-        .inventory-table td:nth-child(1) { width: 25%; } /* Name */
+        .inventory-table td:nth-child(1) { width: 22%; } /* Name */
         .inventory-table th:nth-child(2),
-        .inventory-table td:nth-child(2) { width: 12%; } /* Quantity */
+        .inventory-table td:nth-child(2) { width: 11%; } /* Quantity */
         .inventory-table th:nth-child(3),
         .inventory-table td:nth-child(3) { width: 15%; } /* Price */
         .inventory-table th:nth-child(4),
-        .inventory-table td:nth-child(4) { width: 13%; } /* Stock Level */
+        .inventory-table td:nth-child(4) { width: 12%; } /* Stock Level */
         .inventory-table th:nth-child(5),
         .inventory-table td:nth-child(5) { width: 20%; } /* Status */
         .inventory-table th:nth-child(6),
-        .inventory-table td:nth-child(6) { width: 15%; } /* Actions */
+        .inventory-table td:nth-child(6) { width: 20%; } /* Actions */
         @media (max-width: 640px) {
             .inventory-table th:nth-child(4),
             .inventory-table td:nth-child(4) { display: none; }
             .inventory-table th:nth-child(1),
-            .inventory-table td:nth-child(1) { width: 40%; }
+            .inventory-table td:nth-child(1) { width: 35%; }
             .inventory-table th:nth-child(2),
             .inventory-table td:nth-child(2) { width: 20%; }
             .inventory-table th:nth-child(3),
-            .inventory-table td:nth-child(3) { width: 20%; }
+            .inventory-table td:nth-child(3) { width: 15%; }
             .inventory-table th:nth-child(5),
-            .inventory-table td:nth-child(5) { width: 10%; }
+            .inventory-table td:nth-child(5) { width: 15%; }
             .inventory-table th:nth-child(6),
-            .inventory-table td:nth-child(6) { width: 10%; }
-        }
-        /* Mobile responsive table */
-        @media screen and (max-width: 640px) {
-            .inventory-table table,
-            .inventory-table thead,
-            .inventory-table tbody,
-            .inventory-table th,
-            .inventory-table td,
-            .inventory-table tr {
-                display: block;
-            }
-            .inventory-table thead tr {
-                position: absolute;
-                top: -9999px;
-                left: -9999px;
-            }
-            .inventory-table tr {
-                border: 1px solid #e5e7eb;
-                margin-bottom: 1rem;
-                padding: 1rem;
-                border-radius: 0.5rem;
-                background: white;
-                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-                dark: {
-                    border-color: #374151;
-                    background: #1f2937;
-                }
-            }
-            .inventory-table td {
-                border: none;
-                position: relative;
-                padding-left: 50%;
-                padding-top: 0.5rem;
-                padding-bottom: 0.5rem;
-                white-space: normal;
-                text-align: right;
-            }
-            .inventory-table td:before {
-                content: attr(data-label) ": ";
-                position: absolute;
-                left: 6px;
-                width: 45%;
-                padding-right: 10px;
-                white-space: nowrap;
-                font-weight: bold;
-                text-align: left;
-                color: #374151;
-                dark: {
-                    color: #d1d5db;
-                }
-            }
-            .inventory-table td:last-child:before {
-                content: "Actions: ";
-            }
-            .inventory-table .status-span {
-                justify-content: flex-end;
-            }
-            .inventory-table .actions-buttons {
-                display: flex;
-                justify-content: flex-end;
-                gap: 0.5rem;
-            }
+            .inventory-table td:nth-child(6) { width: 15%; }
         }
     </style>
 </head>
@@ -368,9 +306,9 @@
                         <input type="text" class="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 bg-gray-800/30 border border-white/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all text-white placeholder-white/50" id="searchInput" placeholder="Search items..." onkeyup="filterItems()">
                     </div>
                 </div>
-                <div class="overflow-x-auto">
+                <div class="overflow-auto max-h-[500px]">
                     <table>
-                        <thead class="bg-gray-800/30">
+                        <thead class="bg-gray-800/30 sticky top-0 z-10">
                             <tr>
                                 <th class="px-4 sm:px-8 py-4 sm:py-6 text-left text-base sm:text-lg font-semibold text-white/70 uppercase tracking-wide table-cell">Name</th>
                                 <th class="px-4 sm:px-8 py-4 sm:py-6 text-left text-base sm:text-lg font-semibold text-white/70 uppercase tracking-wide table-cell">Quantity</th>
